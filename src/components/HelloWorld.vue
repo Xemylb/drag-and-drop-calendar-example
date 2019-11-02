@@ -1,129 +1,171 @@
 <template>
   <div class="hello">
     <h1>{{ msg }}</h1>
-    <p>
-      For a guide and recipes on how to configure / customize this project,<br />
-      check out the
-      <a href="https://cli.vuejs.org" target="_blank" rel="noopener"
-        >vue-cli documentation</a
-      >.
-    </p>
-    <h3>Installed CLI Plugins</h3>
-    <ul>
-      <li>
-        <a
-          href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-babel"
-          target="_blank"
-          rel="noopener"
-          >babel</a
-        >
-      </li>
-      <li>
-        <a
-          href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-pwa"
-          target="_blank"
-          rel="noopener"
-          >pwa</a
-        >
-      </li>
-      <li>
-        <a
-          href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-eslint"
-          target="_blank"
-          rel="noopener"
-          >eslint</a
-        >
-      </li>
-      <li>
-        <a
-          href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-unit-jest"
-          target="_blank"
-          rel="noopener"
-          >unit-jest</a
-        >
-      </li>
-    </ul>
-    <h3>Essential Links</h3>
-    <ul>
-      <li>
-        <a href="https://vuejs.org" target="_blank" rel="noopener">Core Docs</a>
-      </li>
-      <li>
-        <a href="https://forum.vuejs.org" target="_blank" rel="noopener"
-          >Forum</a
-        >
-      </li>
-      <li>
-        <a href="https://chat.vuejs.org" target="_blank" rel="noopener"
-          >Community Chat</a
-        >
-      </li>
-      <li>
-        <a href="https://twitter.com/vuejs" target="_blank" rel="noopener"
-          >Twitter</a
-        >
-      </li>
-      <li>
-        <a href="https://news.vuejs.org" target="_blank" rel="noopener">News</a>
-      </li>
-    </ul>
-    <h3>Ecosystem</h3>
-    <ul>
-      <li>
-        <a href="https://router.vuejs.org" target="_blank" rel="noopener"
-          >vue-router</a
-        >
-      </li>
-      <li>
-        <a href="https://vuex.vuejs.org" target="_blank" rel="noopener">vuex</a>
-      </li>
-      <li>
-        <a
-          href="https://github.com/vuejs/vue-devtools#vue-devtools"
-          target="_blank"
-          rel="noopener"
-          >vue-devtools</a
-        >
-      </li>
-      <li>
-        <a href="https://vue-loader.vuejs.org" target="_blank" rel="noopener"
-          >vue-loader</a
-        >
-      </li>
-      <li>
-        <a
-          href="https://github.com/vuejs/awesome-vue"
-          target="_blank"
-          rel="noopener"
-          >awesome-vue</a
-        >
-      </li>
-    </ul>
+    <table v-if="rooms.length > 0">
+      <thead>
+        <tr>
+          <th>Rooms name</th>
+          <th v-for="({ date }, index) in rooms[0].dates" :key="index">{{ date }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="{id, name, dates} in rooms" :key="id">
+          <th>{{name}}</th>
+          <th v-for="({ date, events }, index) in dates" :key="index">
+            <draggable v-model="dates[index].events" draggable=".event" group='events'>
+              <div :style="{width:`${element.duration * tdWidth}px` }" v-for="element in events" :key="element.name" @click='eventClick()' class="event">
+                {{element.name}}
+              </div>
+            </draggable>
+          </th>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </template>
 
 <script>
+    import draggable from 'vuedraggable'
 export default {
   name: "HelloWorld",
+    components: {
+        draggable,
+    },
   props: {
     msg: String
+  },
+  data: () => ({
+      tdWidth: 140,
+      tdHeight: 50,
+    prevDate: "",
+    nextDate: "",
+    rooms: [{
+      id: 1,
+      name: 'Room1',
+      dates: [],
+    },
+    {
+      id: 2,
+      name: 'Room2',
+      dates: [],
+    }],
+      eventsList:[
+          {
+              date: '21/10/2019',
+              duration: '2',
+              name: 'Event',
+              roomId: 1,
+          },
+          {
+              date: '24/10/2019',
+              duration: '4',
+              roomId: 2,
+              name: 'Event2'
+          },
+          {
+              date: '22/10/2019',
+              duration: '3',
+              roomId: 2,
+              name: 'Event2'
+          }
+      ]
+  }),
+  async mounted() {
+    await this.getRangeDated();
+    await this.setEventsToDates();
+  },
+  methods: {
+    getRangeDated() {
+      this.prevDate = this.$moment().subtract(15, "days");
+      this.nextDate = this.$moment().add(15, "days");
+      const momentStart = this.$moment(this.prevDate._d).format("MM-DD-YYYY");
+      const momentEnd = this.$moment(this.nextDate._d).format("MM-DD-YYYY");
+
+      
+
+      //Logic for getting rest of the dates between two dates("FromDate" to "EndDate")
+      this.rooms.map(room => {
+//creating JS date objects
+      let start = new Date(momentStart);
+      let end = new Date(momentEnd);
+      while (start < end) {
+        const dateObj = {
+          date: this.$moment(start).format("DD/MM/YYYY"),
+          events: []
+        }
+        room.dates.push(dateObj);
+        let newDate = start.setDate(start.getDate() + 1);
+        start = new Date(newDate);
+      }
+      })
+      
+    },
+    eventClick(){
+      alert('click')
+    },
+    setEventsToDates(){
+      this.eventsList.map((event)=>{
+          this.rooms.map(({id, dates}) => {
+            dates.map((item, index) => {
+              if(event.date === item.date && event.roomId === id){
+                dates[index].events.push(event)
+              }
+            })
+          })
+      })
+    },
   }
 };
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
-<style scoped lang="scss">
+<style lang="scss">
+*,
+:after,
+:before {
+  box-sizing: border-box;
+}
+.hello {
+  max-width: 100%;
+  overflow: auto;
+}
+table {
+  border-collapse: collapse;
+  th {
+    position: relative;
+    border: 1px solid;
+    min-width: 140px;
+    max-width: 140px;
+    max-height: 50px;
+    min-height: 50px;
+    &>div{
+    padding: 10px;
+    }
+  }
+}
+.event{
+  position: absolute;
+  left: 0;
+  top:0;
+  height: 100%;
+  background-color: aqua;
+  max-height: 50px;
+  z-index: 2;
+}
 h3 {
   margin: 40px 0 0;
 }
+
 ul {
   list-style-type: none;
   padding: 0;
 }
+
 li {
   display: inline-block;
   margin: 0 10px;
 }
+
 a {
   color: #42b983;
 }
